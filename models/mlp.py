@@ -61,7 +61,7 @@ class DataIterator(torch.utils.data.DataLoader):
 
 
 def build_model(device=torch.device("cpu")):
-    model = skorch.NeuralNet(
+    model = skorch.NeuralNetClassifier(
         module=MLP,
         module__input_dim=100,
         module__output_dim=10,
@@ -101,4 +101,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-t
