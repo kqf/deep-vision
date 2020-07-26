@@ -1,0 +1,18 @@
+# Python
+*.pyc
+*.ipynb
+*.egg*
+.python-version
+
+# OS
+.DS_Store
+
+# Data
+*.zip
+*.csv
+*.txt
+data/
+*.png
+*.json
+*.hd5
+*.pkl
