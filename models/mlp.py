@@ -59,8 +59,14 @@ class DataIterator(torch.utils.data.DataLoader):
         super().__init__(dataset, num_workers=num_workers, *args, **kwargs)
 
 
+class VisionClassifierNet(skorch.NeuralNet):
+    def predict(self, dataset):
+        probas = self.predict_proba(dataset)
+        return probas.argmax(-1)
+
+
 def build_model(device=torch.device("cpu")):
-    model = skorch.NeuralNet(
+    model = VisionClassifierNet(
         module=MLP,
         module__input_dim=100,
         module__output_dim=10,
