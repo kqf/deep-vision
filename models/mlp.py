@@ -5,6 +5,11 @@ import random
 import numpy as np
 
 
+from operator import mul
+from functools import reduce
+from skorch.helper import SliceDataset
+
+
 SEED = 137
 
 random.seed(SEED)
@@ -17,7 +22,6 @@ torch.backends.cudnn.deterministic = True
 class MLP(torch.nn.Module):
     def __init__(self, input_dim, output_dim):
         super().__init__()
-
         self.input_fc = torch.nn.Linear(input_dim, 250)
         self.hidden_fc = torch.nn.Linear(250, 100)
         self.output_fc = torch.nn.Linear(100, output_dim)
@@ -41,7 +45,7 @@ class MLP(torch.nn.Module):
 class ShapeSetter(skorch.callbacks.Callback):
     def on_train_begin(self, net, X, y):
         x, y = next(iter(X))
-        net.set_params(module__image_shape=x.shape)
+        net.set_params(module__input_dim=reduce(mul, x.shape, 1))
         n_pars = self.count_parameters(net.module_)
         print(f'The model has {n_pars:,} trainable parameters')
 
@@ -61,12 +65,10 @@ class DataIterator(torch.utils.data.DataLoader):
 
 
 def build_model(device=torch.device("cpu")):
-    model = skorch.NeuralNetClassifier(
+    model = skorch.NeuralNet(
         module=MLP,
         module__input_dim=100,
         module__output_dim=10,
-        module__hid_size=512,
-        module__latent_size=2,
         optimizer=torch.optim.Adam,
         optimizer__lr=0.0001,
         max_epochs=2,
