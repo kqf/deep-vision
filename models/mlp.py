@@ -7,7 +7,6 @@ import numpy as np
 
 from operator import mul
 from functools import reduce
-from skorch.helper import SliceDataset
 
 
 SEED = 137
@@ -47,21 +46,17 @@ class ShapeSetter(skorch.callbacks.Callback):
         x, y = next(iter(X))
         net.set_params(module__input_dim=reduce(mul, x.shape, 1))
         n_pars = self.count_parameters(net.module_)
-        print(f'The model has {n_pars:,} trainable parameters')
+        print(f"The model has {n_pars:,} trainable parameters")
 
     @staticmethod
     def count_parameters(model):
         return sum(p.numel() for p in model.parameters() if p.requires_grad)
 
 
-# For some reason num_workers doesn't work with skorch :/
+# For some reason num_workers doesn"t work with skorch :/
 class DataIterator(torch.utils.data.DataLoader):
     def __init__(self, dataset, num_workers=4, *args, **kwargs):
         super().__init__(dataset, num_workers=num_workers, *args, **kwargs)
-
-    def __iter__(self):
-        for (x, y) in super().__iter__():
-            yield x, y
 
 
 def build_model(device=torch.device("cpu")):
@@ -76,10 +71,8 @@ def build_model(device=torch.device("cpu")):
         batch_size=64,
         iterator_train=DataIterator,
         iterator_train__shuffle=True,
-        # iterator_tarin__num_workers=2,
         iterator_valid=DataIterator,
         iterator_valid__shuffle=False,
-        # iterator_valid__num_workers=2,
         device=device,
         callbacks=[
             ShapeSetter(),
@@ -95,12 +88,23 @@ def main():
     ])
 
     train = torchvision.datasets.FashionMNIST(
-        root='./data', train=True, download=True, transform=transform,
+        root="./data",
+        train=True,
+        download=True,
+        transform=transform,
     )
 
-    device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
-    build_model(device).fit(train)
+    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+    model = build_model(device).fit(train)
+
+    test = torchvision.datasets.FashionMNIST(
+        root="./data",
+        train=False,
+        download=True,
+        transform=transform,
+    )
+    print(model.predict(test))
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
