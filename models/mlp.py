@@ -33,10 +33,10 @@ class MLP(torch.nn.Module):
         x = x.view(batch_size, -1)
 
         # h_1 = [batch_size, 250]
-        h_1 = torch.nn.relu(self.input_fc(x))
+        h_1 = torch.nn.functional.relu(self.input_fc(x))
 
         # h_2 = [batch_size, 100]
-        h_2 = torch.nn.relu(self.hidden_fc(h_1))
+        h_2 = torch.nn.functional.relu(self.hidden_fc(h_1))
 
         # y_pred = [batch_size, output_dim]
         return self.output_fc(h_2)
@@ -61,7 +61,7 @@ class DataIterator(torch.utils.data.DataLoader):
 
     def __iter__(self):
         for (x, y) in super().__iter__():
-            yield x, x
+            yield x, y
 
 
 def build_model(device=torch.device("cpu")):
@@ -69,6 +69,7 @@ def build_model(device=torch.device("cpu")):
         module=MLP,
         module__input_dim=100,
         module__output_dim=10,
+        criterion=torch.nn.CrossEntropyLoss,
         optimizer=torch.optim.Adam,
         optimizer__lr=0.0001,
         max_epochs=2,
