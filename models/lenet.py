@@ -5,10 +5,6 @@ import random
 import numpy as np
 
 
-from operator import mul
-from functools import reduce
-
-
 SEED = 137
 
 random.seed(SEED)
@@ -19,7 +15,7 @@ torch.backends.cudnn.deterministic = True
 
 
 class LeNet(torch.nn.Module):
-    def __init__(self, input_dim, output_dim):
+    def __init__(self, output_dim):
         super().__init__()
 
         self.conv1 = torch.nn.Conv2d(
@@ -71,8 +67,6 @@ class LeNet(torch.nn.Module):
 
 class ShapeSetter(skorch.callbacks.Callback):
     def on_train_begin(self, net, X, y):
-        x, y = next(iter(X))
-        net.set_params(module__input_dim=reduce(mul, x.shape, 1))
         n_pars = self.count_parameters(net.module_)
         print(f"The model has {n_pars:,} trainable parameters")
 
@@ -96,7 +90,6 @@ class VisionClassifierNet(skorch.NeuralNet):
 def build_model(device=torch.device("cpu")):
     model = VisionClassifierNet(
         module=LeNet,
-        module__input_dim=100,
         module__output_dim=10,
         criterion=torch.nn.CrossEntropyLoss,
         optimizer=torch.optim.Adam,
