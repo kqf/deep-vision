@@ -3,6 +3,7 @@ import torch
 import torchvision
 import random
 import numpy as np
+import more_itertools
 
 
 from operator import mul
@@ -88,7 +89,14 @@ def build_model(device=torch.device("cpu")):
 
 
 def main():
-    transform = torchvision.transforms.Compose([
+    train_transform = torchvision.transforms.Compose([
+        torchvision.transforms.RandomRotation(5, fill=(0,)),
+        torchvision.transforms.RandomCrop(28, padding=2),
+        torchvision.transforms.ToTensor(),
+        torchvision.transforms.Normalize((0.), (1.))
+    ])
+
+    test_transform = torchvision.transforms.Compose([
         torchvision.transforms.ToTensor(),
         torchvision.transforms.Normalize((0.), (1.))
     ])
@@ -97,7 +105,7 @@ def main():
         root="./data",
         train=True,
         download=True,
-        transform=transform,
+        transform=train_transform,
     )
 
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -107,7 +115,7 @@ def main():
         root="./data",
         train=False,
         download=True,
-        transform=transform,
+        transform=test_transform,
     )
     print(model.predict(test))
 
