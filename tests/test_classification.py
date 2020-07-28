@@ -2,7 +2,7 @@ import pytest
 import torchvision
 
 from models.mlp import build_model as build_mlp
-from models.mlp import build_model as build_lenet
+from models.lenet import build_model as build_lenet
 
 
 @pytest.fixture

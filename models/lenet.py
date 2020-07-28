@@ -18,27 +18,55 @@ torch.cuda.manual_seed(SEED)
 torch.backends.cudnn.deterministic = True
 
 
-class MLP(torch.nn.Module):
+class LeNet(torch.nn.Module):
     def __init__(self, input_dim, output_dim):
         super().__init__()
-        self.input_fc = torch.nn.Linear(input_dim, 250)
-        self.hidden_fc = torch.nn.Linear(250, 100)
-        self.output_fc = torch.nn.Linear(100, output_dim)
+
+        self.conv1 = torch.nn.Conv2d(
+            in_channels=1,
+            out_channels=6,
+            kernel_size=5)
+
+        self.conv2 = torch.nn.Conv2d(
+            in_channels=6,
+            out_channels=16,
+            kernel_size=5)
+
+        self.fc_1 = torch.nn.Linear(16 * 4 * 4, 120)
+        self.fc_2 = torch.nn.Linear(120, 84)
+        self.fc_3 = torch.nn.Linear(84, output_dim)
 
     def forward(self, x):
-        # x = [batch_size, height, width]
-        batch_size = x.shape[0]
-        # x = [batch_size, height * width]
-        x = x.view(batch_size, -1)
+        # [batch_size, 1, 28, 28] -> [batch_size, 6, 24, 24]
+        x = self.conv1(x)
 
-        # h_1 = [batch_size, 250]
-        h_1 = torch.nn.functional.relu(self.input_fc(x))
+        # [batch_size, 6, 12, 12]
+        x = torch.nn.functional.max_pool2d(x, kernel_size=2)
 
-        # h_2 = [batch_size, 100]
-        h_2 = torch.nn.functional.relu(self.hidden_fc(h_1))
+        x = torch.nn.functional.relu(x)
 
-        # y_pred = [batch_size, output_dim]
-        return self.output_fc(h_2)
+        # [batch_size, 16, 8, 8]
+        x = self.conv2(x)
+
+        # [batch_size, 16, 4, 4]
+        x = torch.nn.functional.max_pool2d(x, kernel_size=2)
+
+        x = torch.nn.functional.relu(x)
+
+        # [batch_size, 16 * 4 * 4 = 256]
+        x = x.view(x.shape[0], -1)
+
+        # [batch_size, 120]
+        x = self.fc_1(x)
+        x = torch.nn.functional.relu(x)
+
+        # x = batch_size, 84]
+        x = self.fc_2(x)
+        x = torch.nn.functional.relu(x)
+
+        # [batch_size, output dim]
+        x = self.fc_3(x)
+        return x
 
 
 class ShapeSetter(skorch.callbacks.Callback):
@@ -67,7 +95,7 @@ class VisionClassifierNet(skorch.NeuralNet):
 
 def build_model(device=torch.device("cpu")):
     model = VisionClassifierNet(
-        module=MLP,
+        module=LeNet,
         module__input_dim=100,
         module__output_dim=10,
         criterion=torch.nn.CrossEntropyLoss,
