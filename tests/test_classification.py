@@ -1,7 +1,8 @@
 import pytest
 import torchvision
 
-from models.mlp import build_model
+from models.mlp import build_model as build_mlp
+from models.mlp import build_model as build_lenet
 
 
 @pytest.fixture
@@ -20,5 +21,9 @@ def data():
     return data
 
 
-def test_mlp(data):
-    build_model().fit(data)
+@pytest.mark.parametrize("build", [
+    build_mlp,
+    build_lenet,
+])
+def test_mlp(build, data):
+    build().fit(data)
