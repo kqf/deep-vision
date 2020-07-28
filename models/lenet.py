@@ -88,6 +88,11 @@ class VisionClassifierNet(skorch.NeuralNet):
 
 
 def build_model(device=torch.device("cpu")):
+    best_checkpoint = skorch.callbacks.Checkpoint(
+        monitor='valid_loss_best',
+        dirname="lenet.checkpoint"
+    )
+
     model = VisionClassifierNet(
         module=LeNet,
         module__output_dim=10,
@@ -103,6 +108,8 @@ def build_model(device=torch.device("cpu")):
         device=device,
         callbacks=[
             ShapeSetter(),
+            best_checkpoint,
+            skorch.callbacks.LoadInitState(best_checkpoint),
         ]
     )
     return model

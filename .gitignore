@@ -16,3 +16,4 @@ data/
 *.json
 *.hd5
 *.pkl
+*.checkpoint
