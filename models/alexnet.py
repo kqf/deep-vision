@@ -21,15 +21,39 @@ torch.backends.cudnn.deterministic = True
 class AlexNet(torch.nn.Module):
     def __init__(self, input_dim, output_dim):
         super().__init__()
-        self.input_fc = torch.nn.Linear(input_dim, output_dim)
+        
+        self.features = torch.nn.Sequential(
+            # in_channels, out_channels, kernel_size, stride, padding 
+            torch.nn.Conv2d(3, 64, 3, 2, 1),
+            torch.nn.MaxPool2d(2), #kernel_size
+            torch.nn.ReLU(inplace = True),
+            torch.nn.Conv2d(64, 192, 3, padding = 1),
+            torch.nn.MaxPool2d(2),
+            torch.nn.ReLU(inplace = True),
+            torch.nn.Conv2d(192, 384, 3, padding = 1),
+            torch.nn.ReLU(inplace = True),
+            torch.nn.Conv2d(384, 256, 3, padding = 1),
+            torch.nn.ReLU(inplace = True),
+            torch.nn.Conv2d(256, 256, 3, padding = 1),
+            torch.nn.MaxPool2d(2),
+            torch.nn.ReLU(inplace = True)
+        )
+        
+        self.classifier = torch.nn.Sequential(
+            torch.nn.Dropout(0.5),
+            torch.nn.Linear(256 * 2 * 2, 4096),
+            torch.nn.ReLU(inplace = True),
+            torch.nn.Dropout(0.5),
+            torch.nn.Linear(4096, 4096),
+            torch.nn.ReLU(inplace = True),
+            torch.nn.Linear(4096, output_dim),
+        )
 
     def forward(self, x):
-        # x = [batch_size, height, width]
-        batch_size = x.shape[0]
-
-        # x = [batch_size, height * width]
-        return self.output_fc(x.view(batch_size, -1))
-
+        x = self.features(x)
+        h = x.view(x.shape[0], -1)
+        x = self.classifier(h)
+        return x, h
 
 class ShapeSetter(skorch.callbacks.Callback):
     def on_train_begin(self, net, X, y):

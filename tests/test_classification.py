@@ -3,6 +3,7 @@ import torchvision
 
 from models.mlp import build_model as build_mlp
 from models.lenet import build_model as build_lenet
+from models.alexnet import build_model as build_alexnet
 
 
 @pytest.fixture
@@ -22,8 +23,9 @@ def data():
 
 
 @pytest.mark.parametrize("build", [
-    build_mlp,
-    build_lenet,
+    # build_mlp,
+    # build_lenet,
+    build_alexnet
 ])
-def test_mlp(build, data):
+def test_classifier(build, data):
     build().fit(data)
