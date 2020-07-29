@@ -6,6 +6,15 @@ from models.lenet import build_model as build_lenet
 from models.alexnet import build_model as build_alexnet
 
 
+class DownsampledMNIST(torchvision.datasets.MNIST):
+    def __init__(self, n_samples=10, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.n_samples = n_samples
+
+    def __len__(self):
+        return self.n_samples
+
+
 @pytest.fixture
 def data():
     transform = torchvision.transforms.Compose([
@@ -13,7 +22,7 @@ def data():
         torchvision.transforms.Normalize((0.), (1.))
     ])
 
-    data = torchvision.datasets.MNIST(
+    data = DownsampledMNIST(
         root="./data",
         train=True,
         download=True,
