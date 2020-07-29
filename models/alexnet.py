@@ -5,10 +5,6 @@ import random
 import numpy as np
 
 
-from operator import mul
-from functools import reduce
-
-
 SEED = 137
 
 random.seed(SEED)
@@ -19,33 +15,34 @@ torch.backends.cudnn.deterministic = True
 
 
 class AlexNet(torch.nn.Module):
-    def __init__(self, input_dim, output_dim):
+    def __init__(self, input_dim, output_dim, fc_size=256 * 2 * 2):
         super().__init__()
-        
+
+        n_channels, width, height = input_dim
         self.features = torch.nn.Sequential(
-            # in_channels, out_channels, kernel_size, stride, padding 
-            torch.nn.Conv2d(3, 64, 3, 2, 1),
-            torch.nn.MaxPool2d(2), #kernel_size
-            torch.nn.ReLU(inplace = True),
-            torch.nn.Conv2d(64, 192, 3, padding = 1),
+            # in_channels, out_channels, kernel_size, stride, padding
+            torch.nn.Conv2d(n_channels, 64, 3, 2, 1),
+            torch.nn.MaxPool2d(2),  # kernel_size
+            torch.nn.ReLU(inplace=True),
+            torch.nn.Conv2d(64, 192, 3, padding=1),
             torch.nn.MaxPool2d(2),
-            torch.nn.ReLU(inplace = True),
-            torch.nn.Conv2d(192, 384, 3, padding = 1),
-            torch.nn.ReLU(inplace = True),
-            torch.nn.Conv2d(384, 256, 3, padding = 1),
-            torch.nn.ReLU(inplace = True),
-            torch.nn.Conv2d(256, 256, 3, padding = 1),
+            torch.nn.ReLU(inplace=True),
+            torch.nn.Conv2d(192, 384, 3, padding=1),
+            torch.nn.ReLU(inplace=True),
+            torch.nn.Conv2d(384, 256, 3, padding=1),
+            torch.nn.ReLU(inplace=True),
+            torch.nn.Conv2d(256, 256, 3, padding=1),
             torch.nn.MaxPool2d(2),
-            torch.nn.ReLU(inplace = True)
+            torch.nn.ReLU(inplace=True)
         )
-        
+
         self.classifier = torch.nn.Sequential(
             torch.nn.Dropout(0.5),
-            torch.nn.Linear(256 * 2 * 2, 4096),
-            torch.nn.ReLU(inplace = True),
+            torch.nn.Linear(fc_size, 4096),
+            torch.nn.ReLU(inplace=True),
             torch.nn.Dropout(0.5),
             torch.nn.Linear(4096, 4096),
-            torch.nn.ReLU(inplace = True),
+            torch.nn.ReLU(inplace=True),
             torch.nn.Linear(4096, output_dim),
         )
 
@@ -53,18 +50,26 @@ class AlexNet(torch.nn.Module):
         x = self.features(x)
         h = x.view(x.shape[0], -1)
         x = self.classifier(h)
-        return x, h
+        return x
+
 
 class ShapeSetter(skorch.callbacks.Callback):
     def on_train_begin(self, net, X, y):
         x, y = next(iter(X))
-        net.set_params(module__input_dim=reduce(mul, x.shape, 1))
+        net.set_params(module__input_dim=x.shape)
+        net.set_params(module__fc_size=self.count_fc_features(
+            net.module_.features, x.shape))
         n_pars = self.count_parameters(net.module_)
         print(f"The model has {n_pars:,} trainable parameters")
 
     @staticmethod
     def count_parameters(model):
         return sum(p.numel() for p in model.parameters() if p.requires_grad)
+
+    @staticmethod
+    def count_fc_features(model, shape):
+        with torch.no_grad():
+            return model(torch.rand(1, *shape)).data.view(1, -1).shape[-1]
 
 
 # For some reason num_workers doesn"t work with skorch :/
@@ -82,7 +87,7 @@ class VisionClassifierNet(skorch.NeuralNet):
 def build_model(device=torch.device("cpu")):
     model = VisionClassifierNet(
         module=AlexNet,
-        module__input_dim=100,
+        module__input_dim=(1, 32, 32),
         module__output_dim=10,
         criterion=torch.nn.CrossEntropyLoss,
         optimizer=torch.optim.Adam,
