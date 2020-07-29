@@ -14,8 +14,13 @@ torch.cuda.manual_seed(SEED)
 torch.backends.cudnn.deterministic = True
 
 
+def count_output_size(model, shape):
+    with torch.no_grad():
+        return model(torch.rand(1, *shape)).data.view(1, -1).shape[-1]
+
+
 class AlexNet(torch.nn.Module):
-    def __init__(self, input_dim, output_dim, fc_size=256 * 2 * 2):
+    def __init__(self, input_dim, output_dim):
         super().__init__()
 
         n_channels, width, height = input_dim
@@ -36,6 +41,7 @@ class AlexNet(torch.nn.Module):
             torch.nn.ReLU(inplace=True)
         )
 
+        fc_size = count_output_size(self.features, input_dim)
         self.classifier = torch.nn.Sequential(
             torch.nn.Dropout(0.5),
             torch.nn.Linear(fc_size, 4096),
@@ -57,19 +63,12 @@ class ShapeSetter(skorch.callbacks.Callback):
     def on_train_begin(self, net, X, y):
         x, y = next(iter(X))
         net.set_params(module__input_dim=x.shape)
-        net.set_params(module__fc_size=self.count_fc_features(
-            net.module_.features, x.shape))
         n_pars = self.count_parameters(net.module_)
         print(f"The model has {n_pars:,} trainable parameters")
 
     @staticmethod
     def count_parameters(model):
         return sum(p.numel() for p in model.parameters() if p.requires_grad)
-
-    @staticmethod
-    def count_fc_features(model, shape):
-        with torch.no_grad():
-            return model(torch.rand(1, *shape)).data.view(1, -1).shape[-1]
 
 
 # For some reason num_workers doesn"t work with skorch :/
