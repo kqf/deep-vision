@@ -121,8 +121,9 @@ def main():
     print(f'Calculated stds: {stds}')
 
     train_transform = torchvision.transforms.Compose([
-        torchvision.transforms.RandomRotation(5, fill=(0,)),
-        torchvision.transforms.RandomCrop(28, padding=2),
+        torchvision.transforms.RandomRotation(5),
+        torchvision.transforms.RandomHorizontalFlip(0.5),
+        torchvision.transforms.RandomCrop(32, padding=2),
         torchvision.transforms.ToTensor(),
         torchvision.transforms.Normalize(means, stds)
     ])

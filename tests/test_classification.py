@@ -32,8 +32,8 @@ def data():
 
 
 @pytest.mark.parametrize("build", [
-    # build_mlp,
-    # build_lenet,
+    build_mlp,
+    build_lenet,
     build_alexnet
 ])
 def test_classifier(build, data):
