@@ -106,19 +106,33 @@ def build_model(device=torch.device("cpu")):
 
 
 def main():
+    # It's ugly to download dataset two times to extract the stats.
+    # TODO: Fix this later
+    train = torchvision.datasets.CIFAR10(
+        root="./data",
+        train=True,
+        download=True,
+    )
+
+    means = train.data.mean(axis=(0, 1, 2)) / 255
+    stds = train.data.std(axis=(0, 1, 2)) / 255
+
+    print(f'Calculated means: {means}')
+    print(f'Calculated stds: {stds}')
+
     train_transform = torchvision.transforms.Compose([
         torchvision.transforms.RandomRotation(5, fill=(0,)),
         torchvision.transforms.RandomCrop(28, padding=2),
         torchvision.transforms.ToTensor(),
-        torchvision.transforms.Normalize((0.), (1.))
+        torchvision.transforms.Normalize(means, stds)
     ])
 
     test_transform = torchvision.transforms.Compose([
         torchvision.transforms.ToTensor(),
-        torchvision.transforms.Normalize((0.), (1.))
+        torchvision.transforms.Normalize(means, stds)
     ])
 
-    train = torchvision.datasets.FashionMNIST(
+    train = torchvision.datasets.CIFAR10(
         root="./data",
         train=True,
         download=True,
@@ -128,7 +142,7 @@ def main():
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     model = build_model(device).fit(train)
 
-    test = torchvision.datasets.FashionMNIST(
+    test = torchvision.datasets.CIFAR10(
         root="./data",
         train=False,
         download=True,
