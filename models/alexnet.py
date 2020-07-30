@@ -83,6 +83,16 @@ class VisionClassifierNet(skorch.NeuralNet):
         return probas.argmax(-1)
 
 
+def initialize_weights(m):
+    if isinstance(m, torch.nn.Conv2d):
+        torch.nn.init.kaiming_normal_(m.weight.data, nonlinearity='relu')
+        torch.nn.init.constant_(m.bias.data, 0)
+    elif isinstance(m, torch.nn.Linear):
+        torch.nn.init.xavier_normal_(
+            m.weight.data, gain=torch.nn.init.calculate_gain('relu'))
+        torch.nn.init.constant_(m.bias.data, 0)
+
+
 def build_model(device=torch.device("cpu")):
     model = VisionClassifierNet(
         module=AlexNet,
@@ -100,6 +110,7 @@ def build_model(device=torch.device("cpu")):
         device=device,
         callbacks=[
             ShapeSetter(),
+            skorch.callbacks.Initializer('*', fn=initialize_weights),
         ]
     )
     return model
