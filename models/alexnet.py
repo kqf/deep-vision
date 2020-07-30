@@ -4,6 +4,8 @@ import torchvision
 import random
 import numpy as np
 
+from sklearn.metrics import accuracy_score
+
 
 SEED = 137
 
@@ -81,6 +83,10 @@ class VisionClassifierNet(skorch.NeuralNet):
     def predict(self, dataset):
         probas = self.predict_proba(dataset)
         return probas.argmax(-1)
+
+    def score(self, X, y):
+        preds = self.predict(X)
+        return accuracy_score(preds, y)
 
 
 def initialize_weights(m):

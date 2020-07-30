@@ -32,9 +32,12 @@ def data():
 
 
 @pytest.mark.parametrize("build", [
-    build_mlp,
-    build_lenet,
+    # build_mlp,
+    # build_lenet,
     build_alexnet
 ])
 def test_classifier(build, data):
-    build().fit(data)
+    model = build().fit(data)
+    y = [data[i][1] for i in range(len(data))]
+
+    assert model.score(data, y) > 1. / 10
