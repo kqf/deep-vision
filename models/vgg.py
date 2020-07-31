@@ -22,35 +22,20 @@ def count_output_size(model, shape):
 
 
 class VGG(torch.nn.Module):
-    def __init__(self, input_dim, output_dim):
+    def __init__(self, input_dim, output_dim, features=None):
         super().__init__()
-
-        n_channels, width, height = input_dim
-        self.features = torch.nn.Sequential(
-            # in_channels, out_channels, kernel_size, stride, padding
-            torch.nn.Conv2d(n_channels, 64, 3, 2, 1),
-            torch.nn.MaxPool2d(2),  # kernel_size
-            torch.nn.ReLU(inplace=True),
-            torch.nn.Conv2d(64, 192, 3, padding=1),
-            torch.nn.MaxPool2d(2),
-            torch.nn.ReLU(inplace=True),
-            torch.nn.Conv2d(192, 384, 3, padding=1),
-            torch.nn.ReLU(inplace=True),
-            torch.nn.Conv2d(384, 256, 3, padding=1),
-            torch.nn.ReLU(inplace=True),
-            torch.nn.Conv2d(256, 256, 3, padding=1),
-            torch.nn.MaxPool2d(2),
-            torch.nn.ReLU(inplace=True)
-        )
+        self.features = features or (lambda x: x)
+        self.avgpool = torch.nn.AdaptiveAvgPool2d(7)
 
         fc_size = count_output_size(self.features, input_dim)
         self.classifier = torch.nn.Sequential(
-            torch.nn.Dropout(0.5),
+            # torch.nn.Linear(512 * 7 * 7, 4096), # Original size
             torch.nn.Linear(fc_size, 4096),
             torch.nn.ReLU(inplace=True),
             torch.nn.Dropout(0.5),
             torch.nn.Linear(4096, 4096),
             torch.nn.ReLU(inplace=True),
+            torch.nn.Dropout(0.5),
             torch.nn.Linear(4096, output_dim),
         )
 
