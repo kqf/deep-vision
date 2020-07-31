@@ -18,7 +18,7 @@ torch.backends.cudnn.deterministic = True
 
 def count_output_size(model, shape):
     with torch.no_grad():
-        return model(torch.rand(1, *shape)).data.view(1, -1).shape[-1]
+        return model(torch.rand(2, *shape)).data.view(2, -1).shape[-1]
 
 
 VGG_CONFIG = {
@@ -37,22 +37,29 @@ def prepare_vgg_layers(config, batch_norm, in_channels=3):
     for c in config:
         assert c == 'M' or isinstance(c, int)
         if c == 'M':
-            layers += [nn.MaxPool2d(kernel_size=2)]
+            layers += [torch.nn.MaxPool2d(kernel_size=2)]
         else:
-            conv2d = nn.Conv2d(in_channels, c, kernel_size=3, padding=1)
+            conv2d = torch.nn.Conv2d(in_channels, c, kernel_size=3, padding=1)
             if batch_norm:
-                layers += [conv2d, nn.BatchNorm2d(c), nn.ReLU(inplace=True)]
+                layers += [conv2d, torch.nn.BatchNorm2d(c),
+                           torch.nn.ReLU(inplace=True)]
             else:
-                layers += [conv2d, nn.ReLU(inplace=True)]
+                layers += [conv2d, torch.nn.ReLU(inplace=True)]
             in_channels = c
 
-    return nn.Sequential(*layers)
+    return torch.nn.Sequential(*layers)
 
 
 class VGG(torch.nn.Module):
-    def __init__(self, input_dim, output_dim, features=None):
+    def __init__(self, input_dim, output_dim, version="vgg11",
+                 batch_norm=True):
         super().__init__()
-        self.features = features or (lambda x: x)
+
+        self.features = prepare_vgg_layers(
+            VGG_CONFIG[version], batch_norm, input_dim[0])
+
+        print(self.features)
+
         self.avgpool = torch.nn.AdaptiveAvgPool2d(7)
 
         fc_size = count_output_size(self.features, input_dim)

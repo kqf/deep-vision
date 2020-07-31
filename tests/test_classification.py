@@ -36,7 +36,7 @@ def data():
     build_mlp,
     build_lenet,
     build_alexnet,
-    build_vgg,
+    # build_vgg,
 ])
 def test_classifier(build, data):
     model = build().fit(data)
