@@ -21,6 +21,34 @@ def count_output_size(model, shape):
         return model(torch.rand(1, *shape)).data.view(1, -1).shape[-1]
 
 
+VGG_CONFIG = {
+    "vgg11": [64, 'M', 128, 'M', 256, 256, 'M', 512, 512, 'M', 512, 512, 'M'],
+    "vgg13": [64, 64, 'M', 128, 128, 'M', 256, 256, 'M', 512, 512, 'M',
+              512, 512, 'M'],
+    "vgg16": [64, 64, 'M', 128, 128, 'M', 256, 256, 256, 'M', 512, 512, 512,
+              'M', 512, 512, 512, 'M'],
+    "vgg19": [64, 64, 'M', 128, 128, 'M', 256, 256, 256, 256, 'M',
+              512, 512, 512, 512, 'M', 512, 512, 512, 512, 'M'],
+}
+
+
+def prepare_vgg_layers(config, batch_norm, in_channels=3):
+    layers = []
+    for c in config:
+        assert c == 'M' or isinstance(c, int)
+        if c == 'M':
+            layers += [nn.MaxPool2d(kernel_size=2)]
+        else:
+            conv2d = nn.Conv2d(in_channels, c, kernel_size=3, padding=1)
+            if batch_norm:
+                layers += [conv2d, nn.BatchNorm2d(c), nn.ReLU(inplace=True)]
+            else:
+                layers += [conv2d, nn.ReLU(inplace=True)]
+            in_channels = c
+
+    return nn.Sequential(*layers)
+
+
 class VGG(torch.nn.Module):
     def __init__(self, input_dim, output_dim, features=None):
         super().__init__()
