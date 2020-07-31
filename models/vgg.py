@@ -85,6 +85,11 @@ class ShapeSetter(skorch.callbacks.Callback):
     def on_train_begin(self, net, X, y):
         x, y = next(iter(X))
         net.set_params(module__input_dim=x.shape)
+
+        # Load the pretrained model
+        pretrained_model = torchvision.models.vgg11_bn(pretrained=True)
+        net.module_.load_state_dict(pretrained.state_dict())
+
         n_pars = self.count_parameters(net.module_)
         print(f"The model has {n_pars:,} trainable parameters")
 
@@ -120,6 +125,8 @@ def initialize_weights(m):
 
 
 def build_model(device=torch.device("cpu")):
+    pretrained_model = torchvision.models.vgg11_bn(pretrained=True)
+
     model = VisionClassifierNet(
         module=VGG,
         module__input_dim=(1, 32, 32),
