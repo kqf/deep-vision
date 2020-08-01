@@ -56,12 +56,20 @@ class VGG(torch.nn.Module):
                  batch_norm=False):
         super().__init__()
 
-        self.features = prepare_vgg_layers(
-            VGG_CONFIG[version], batch_norm, input_dim[0])
+        self.preprocess = torch.nn.Identity()
 
+        n_channes = input_dim[0]
+        if n_channes != 3:
+            self.preprocess = torch.nn.Conv2d(n_channes, 3, kernel_size=1)
+
+        self.features = prepare_vgg_layers(VGG_CONFIG[version], batch_norm)
         self.avgpool = torch.nn.AdaptiveAvgPool2d(7)
 
-        fc_size = count_output_size(self.features, input_dim)
+        fc_size = count_output_size(
+            torch.nn.Sequential(self.preprocess, self.features),
+            input_dim
+        )
+
         self.classifier = torch.nn.Sequential(
             # torch.nn.Linear(512 * 7 * 7, 4096), # Original size
             torch.nn.Linear(fc_size, 4096),
@@ -74,6 +82,7 @@ class VGG(torch.nn.Module):
         )
 
     def forward(self, x):
+        x = self.preprocess(x)
         x = self.features(x)
         h = x.view(x.shape[0], -1)
         x = self.classifier(h)
