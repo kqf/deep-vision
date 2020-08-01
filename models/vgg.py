@@ -16,9 +16,10 @@ torch.cuda.manual_seed(SEED)
 torch.backends.cudnn.deterministic = True
 
 
-def count_output_size(model, shape):
+def count_output_size(model, shape, batch_size=2):
     with torch.no_grad():
-        return model(torch.rand(1, *shape)).data.view(1, -1).shape[-1]
+        batch = torch.rand(batch_size, *shape)
+        return model(batch).data.view(batch_size, -1).shape[-1]
 
 
 VGG_CONFIG = {
@@ -132,7 +133,7 @@ def initialize_weights(m):
         torch.nn.init.constant_(m.bias.data, 0)
 
 
-def build_model(version="vgg_mnist", batch_norm=False):
+def build_model(version="vgg_mnist", batch_norm=True):
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     model = VisionClassifierNet(
         module=VGG,
