@@ -90,16 +90,29 @@ class VGG(torch.nn.Module):
         return x
 
 
+def from_pretrained(module, pretrained_module):
+    custom = module.state_dict()
+    pretrained = pretrained_module.state_dict()
+    # Add weights from the new module missing in the old model
+    new_layers = {
+        k: v for k, v in custom.items()
+        if k not in pretrained or "classifier" in k
+    }
+    pretrained.update(new_layers)
+    module.load_state_dict(pretrained)
+
+
 class ShapeSetter(skorch.callbacks.Callback):
     def on_train_begin(self, net, X, y):
         x, y = next(iter(X))
         net.set_params(module__input_dim=x.shape)
 
-        # Load the pretrained model
-        # pretrained = torchvision.models.vgg11_bn(pretrained=True)
-        # net.module_.load_state_dict(pretrained.state_dict())
+        module = net.module_
 
-        n_pars = self.count_parameters(net.module_)
+        pretrained = torchvision.models.vgg11_bn(pretrained=True)
+        from_pretrained(module, pretrained)
+
+        n_pars = self.count_parameters(module)
         print(f"The model has {n_pars:,} trainable parameters")
 
     @staticmethod
