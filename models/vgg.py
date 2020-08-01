@@ -18,10 +18,11 @@ torch.backends.cudnn.deterministic = True
 
 def count_output_size(model, shape):
     with torch.no_grad():
-        return model(torch.rand(2, *shape)).data.view(2, -1).shape[-1]
+        return model(torch.rand(1, *shape)).data.view(1, -1).shape[-1]
 
 
 VGG_CONFIG = {
+    "vgg_mnist": [64, 'M', 128, 'M', 256, 256, 'M', 512, 512, 'M', 512, 512],
     "vgg11": [64, 'M', 128, 'M', 256, 256, 'M', 512, 512, 'M', 512, 512, 'M'],
     "vgg13": [64, 64, 'M', 128, 128, 'M', 256, 256, 'M', 512, 512, 'M',
               512, 512, 'M'],
@@ -51,14 +52,12 @@ def prepare_vgg_layers(config, batch_norm, in_channels=3):
 
 
 class VGG(torch.nn.Module):
-    def __init__(self, input_dim, output_dim, version="vgg11",
-                 batch_norm=True):
+    def __init__(self, input_dim, output_dim, version="vgg_mnist",
+                 batch_norm=False):
         super().__init__()
 
         self.features = prepare_vgg_layers(
             VGG_CONFIG[version], batch_norm, input_dim[0])
-
-        print(self.features)
 
         self.avgpool = torch.nn.AdaptiveAvgPool2d(7)
 
@@ -87,8 +86,8 @@ class ShapeSetter(skorch.callbacks.Callback):
         net.set_params(module__input_dim=x.shape)
 
         # Load the pretrained model
-        pretrained_model = torchvision.models.vgg11_bn(pretrained=True)
-        net.module_.load_state_dict(pretrained.state_dict())
+        # pretrained = torchvision.models.vgg11_bn(pretrained=True)
+        # net.module_.load_state_dict(pretrained.state_dict())
 
         n_pars = self.count_parameters(net.module_)
         print(f"The model has {n_pars:,} trainable parameters")
@@ -124,13 +123,14 @@ def initialize_weights(m):
         torch.nn.init.constant_(m.bias.data, 0)
 
 
-def build_model(device=torch.device("cpu")):
-    pretrained_model = torchvision.models.vgg11_bn(pretrained=True)
-
+def build_model(version="vgg_mnist", batch_norm=False):
+    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     model = VisionClassifierNet(
         module=VGG,
         module__input_dim=(1, 32, 32),
         module__output_dim=10,
+        module__version=version,
+        module__batch_norm=batch_norm,
         criterion=torch.nn.CrossEntropyLoss,
         optimizer=torch.optim.Adam,
         optimizer__lr=0.0001,
