@@ -67,7 +67,11 @@ class VGG(torch.nn.Module):
         self.avgpool = torch.nn.AdaptiveAvgPool2d(7)
 
         fc_size = count_output_size(
-            torch.nn.Sequential(self.preprocess, self.features),
+            torch.nn.Sequential(
+                self.preprocess,
+                self.features,
+                self.avgpool,
+            ),
             input_dim
         )
 
@@ -85,6 +89,7 @@ class VGG(torch.nn.Module):
     def forward(self, x):
         x = self.preprocess(x)
         x = self.features(x)
+        x = self.avgpool(x)
         h = x.view(x.shape[0], -1)
         x = self.classifier(h)
         return x
