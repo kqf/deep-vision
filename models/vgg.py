@@ -182,7 +182,7 @@ def main():
         torchvision.transforms.Resize(pretrained_size),
         torchvision.transforms.RandomRotation(5),
         torchvision.transforms.RandomHorizontalFlip(0.5),
-        torchvision.transforms.RandomCrop(32, padding=2),
+        torchvision.transforms.RandomCrop(pretrained_size, padding=10),
         torchvision.transforms.ToTensor(),
         torchvision.transforms.Normalize(pretrained_means, pretrained_stds)
     ])
