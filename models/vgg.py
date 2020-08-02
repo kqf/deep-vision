@@ -16,12 +16,6 @@ torch.cuda.manual_seed(SEED)
 torch.backends.cudnn.deterministic = True
 
 
-def count_output_size(model, shape, batch_size=2):
-    with torch.no_grad():
-        batch = torch.rand(batch_size, *shape)
-        return model(batch).data.view(batch_size, -1).shape[-1]
-
-
 VGG_CONFIG = {
     "vgg_mnist": [64, 'M', 128, 'M', 256, 256, 'M', 512, 512, 'M', 512, 512],
     "vgg11": [64, 'M', 128, 'M', 256, 256, 'M', 512, 512, 'M', 512, 512, 'M'],
@@ -66,18 +60,8 @@ class VGG(torch.nn.Module):
         self.features = prepare_vgg_layers(VGG_CONFIG[version], batch_norm)
         self.avgpool = torch.nn.AdaptiveAvgPool2d(7)
 
-        fc_size = count_output_size(
-            torch.nn.Sequential(
-                self.preprocess,
-                self.features,
-                self.avgpool,
-            ),
-            input_dim
-        )
-
         self.classifier = torch.nn.Sequential(
-            # torch.nn.Linear(512 * 7 * 7, 4096), # Original size
-            torch.nn.Linear(fc_size, 4096),
+            torch.nn.Linear(512 * 7 * 7, 4096),  # Original size
             torch.nn.ReLU(inplace=True),
             torch.nn.Dropout(0.5),
             torch.nn.Linear(4096, 4096),
