@@ -162,31 +162,27 @@ def build_model(version="vgg_mnist", batch_norm=True):
 
 
 def main():
-    # It's ugly to download dataset two times to extract the stats.
-    # TODO: Fix this later
-    train = torchvision.datasets.CIFAR10(
-        root="./data",
-        train=True,
-        download=True,
-    )
+    # See https://pytorch.org/docs/stable/torchvision/models.html
+    pretrained_size = 224
+    pretrained_means = [0.485, 0.456, 0.406]
+    pretrained_stds = [0.229, 0.224, 0.225]
 
-    means = train.data.mean(axis=(0, 1, 2)) / 255
-    stds = train.data.std(axis=(0, 1, 2)) / 255
-
-    print(f'Calculated means: {means}')
-    print(f'Calculated stds: {stds}')
+    print(f'Calculated means: {pretrained_means}')
+    print(f'Calculated stds: {pretrained_stds}')
 
     train_transform = torchvision.transforms.Compose([
+        torchvision.transforms.Resize(pretrained_size),
         torchvision.transforms.RandomRotation(5),
         torchvision.transforms.RandomHorizontalFlip(0.5),
         torchvision.transforms.RandomCrop(32, padding=2),
         torchvision.transforms.ToTensor(),
-        torchvision.transforms.Normalize(means, stds)
+        torchvision.transforms.Normalize(pretrained_means, pretrained_stds)
     ])
 
     test_transform = torchvision.transforms.Compose([
+        torchvision.transforms.Resize(pretrained_size),
         torchvision.transforms.ToTensor(),
-        torchvision.transforms.Normalize(means, stds)
+        torchvision.transforms.Normalize(pretrained_means, pretrained_stds)
     ])
 
     train = torchvision.datasets.CIFAR10(
