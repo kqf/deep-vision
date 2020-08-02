@@ -48,7 +48,7 @@ def prepare_vgg_layers(config, batch_norm, in_channels=3):
 
 class VGG(torch.nn.Module):
     def __init__(self, input_dim, output_dim, version="vgg_mnist",
-                 batch_norm=False):
+                 batch_norm=False, freeze_features=False):
         super().__init__()
 
         self.preprocess = torch.nn.Identity()
@@ -58,6 +58,10 @@ class VGG(torch.nn.Module):
             self.preprocess = torch.nn.Conv2d(n_channes, 3, kernel_size=1)
 
         self.features = prepare_vgg_layers(VGG_CONFIG[version], batch_norm)
+
+        for parameter in self.features.parameters():
+            parameter.requires_grad = not freeze_features
+
         self.avgpool = torch.nn.AdaptiveAvgPool2d(7)
 
         self.classifier = torch.nn.Sequential(
@@ -143,6 +147,7 @@ def build_model(version="vgg_mnist", batch_norm=True):
         module__output_dim=10,
         module__version=version,
         module__batch_norm=batch_norm,
+        module__freeze_features=False,
         criterion=torch.nn.CrossEntropyLoss,
         optimizer=torch.optim.Adam,
         optimizer__lr=0.0001,
