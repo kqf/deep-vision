@@ -150,7 +150,10 @@ def build_model(version="vgg_mnist", batch_norm=True):
         module__freeze_features=False,
         criterion=torch.nn.CrossEntropyLoss,
         optimizer=torch.optim.Adam,
-        optimizer__lr=0.0001,
+        optimizer__param_groups=[
+            ('features.*', {'lr': 5e-5}),
+        ],
+        optimizer__lr=5e-4,
         max_epochs=2,
         batch_size=256,
         iterator_train=DataIterator,
