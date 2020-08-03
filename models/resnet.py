@@ -1,3 +1,4 @@
+import attr
 import skorch
 import torch
 import torchvision
@@ -140,6 +141,14 @@ class ResNet(torch.nn.Module):
         h = x.view(x.shape[0], -1)
         x = self.classifier(h)
         return x
+
+
+# Basic config is ResNet18
+@attr.s
+class ResNetConfig:
+    block = attr.ib(default=BasicBlock)
+    n_blocks = attr.ib(default=[2, 2, 2, 2])
+    channels = attr.ib(default=[64, 128, 256, 512])
 
 
 class ShapeSetter(skorch.callbacks.Callback):

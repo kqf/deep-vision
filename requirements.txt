@@ -4,3 +4,4 @@ skorch
 ipdb
 pytest
 pandas
+attrs
