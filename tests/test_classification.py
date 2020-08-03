@@ -5,6 +5,7 @@ from models.mlp import build_model as build_mlp
 from models.lenet import build_model as build_lenet
 from models.alexnet import build_model as build_alexnet
 from models.vgg import build_model as build_vgg
+from models.resnet import build_model as build_resnet
 
 
 class DownsampledMNIST(torchvision.datasets.MNIST):
@@ -37,6 +38,7 @@ def data():
     build_lenet,
     build_alexnet,
     build_vgg,
+    build_resnet,
 ])
 def test_classifier(build, data):
     model = build().fit(data)

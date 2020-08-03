@@ -122,10 +122,10 @@ class ResNet(torch.nn.Module):
     def __init__(self, input_dim, output_dim, freeze_features=False):
         super().__init__()
         self.preprocess = torch.nn.Identity()
-        self.avgpool = torch.nn.AdaptiveAvgPool2d(7)
 
+        n_channels, width, height = input_dim
         self.classifier = torch.nn.Sequential(
-            torch.nn.Linear(512 * 7 * 7, 4096),  # Original size
+            torch.nn.Linear(n_channels * width * height, 4096),
             torch.nn.ReLU(inplace=True),
             torch.nn.Dropout(0.5),
             torch.nn.Linear(4096, 4096),
@@ -136,8 +136,6 @@ class ResNet(torch.nn.Module):
 
     def forward(self, x):
         x = self.preprocess(x)
-        x = self.features(x)
-        x = self.avgpool(x)
         h = x.view(x.shape[0], -1)
         x = self.classifier(h)
         return x
