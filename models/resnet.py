@@ -119,7 +119,7 @@ class Bottleneck(torch.nn.Module):
 
 
 class ResNet(torch.nn.Module):
-    def __init__(self, input_dim, config, output_dim):
+    def __init__(self, input_dim, config, output_dim, preprocess=None):
         super().__init__()
 
         block = config.block
@@ -128,6 +128,7 @@ class ResNet(torch.nn.Module):
 
         assert len(n_blocks) == len(channels) == 4
 
+        self.preprocess = preprocess or torch.nn.Identity
         self.in_channels = config.channels[0]
         self.conv1 = torch.nn.Conv2d(
             3, self.in_channels,
@@ -136,18 +137,15 @@ class ResNet(torch.nn.Module):
         self.relu = torch.nn.ReLU(inplace=True)
         self.maxpool = torch.nn.MaxPool2d(kernel_size=3, stride=2, padding=1)
 
-        self.layer1 = self.get_resnet_layer(block, n_blocks[0], channels[0])
-        self.layer2 = self.get_resnet_layer(
-            block, n_blocks[1], channels[1], stride=2)
-        self.layer3 = self.get_resnet_layer(
-            block, n_blocks[2], channels[2], stride=2)
-        self.layer4 = self.get_resnet_layer(
-            block, n_blocks[3], channels[3], stride=2)
+        self.layer1 = self._layer(block, n_blocks[0], channels[0])
+        self.layer2 = self._layer(block, n_blocks[1], channels[1], stride=2)
+        self.layer3 = self._layer(block, n_blocks[2], channels[2], stride=2)
+        self.layer4 = self._layer(block, n_blocks[3], channels[3], stride=2)
 
         self.avgpool = torch.nn.AdaptiveAvgPool2d((1, 1))
         self.fc = torch.nn.Linear(self.in_channels, output_dim)
 
-    def get_resnet_layer(self, block, n_blocks, channels, stride=1):
+    def _layer(self, block, n_blocks, channels, stride=1):
 
         layers = []
 
@@ -166,7 +164,9 @@ class ResNet(torch.nn.Module):
         return torch.nn.Sequential(*layers)
 
     def forward(self, x):
+        x = self.preprocess(x)
 
+        # Original ResNet
         x = self.conv1(x)
         x = self.bn1(x)
         x = self.relu(x)
@@ -194,6 +194,10 @@ class ShapeSetter(skorch.callbacks.Callback):
     def on_train_begin(self, net, X, y):
         x, y = next(iter(X))
         net.set_params(module__input_dim=x.shape)
+
+        n_channels, width, height = x.shape
+        conv = torch.nn.Conv2d(n_channels, 3, 1)
+        net.set_params(module__preprocess=conv)
 
         module = net.module_
 
