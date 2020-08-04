@@ -183,11 +183,24 @@ class ResNet(torch.nn.Module):
         return x
 
 
+# Default values are for ResNet18
 @attr.s
 class ResNetConfig:
     block = attr.ib(default=BasicBlock)
     n_blocks = attr.ib(default=[2, 2, 2, 2])
     channels = attr.ib(default=[64, 128, 256, 512])
+
+
+def from_pretrained(module, pretrained_module):
+    custom = module.state_dict()
+    pretrained = pretrained_module.state_dict()
+    # Add weights from the new module missing in the old model
+    new_layers = {
+        k: v for k, v in custom.items()
+        if k not in pretrained or "fc" in k
+    }
+    pretrained.update(new_layers)
+    module.load_state_dict(pretrained)
 
 
 class ShapeSetter(skorch.callbacks.Callback):
@@ -201,6 +214,8 @@ class ShapeSetter(skorch.callbacks.Callback):
 
         module = net.module_
 
+        pretrained = torchvision.models.resnet18(pretrained=True)
+        from_pretrained(module, pretrained)
         n_pars = self.count_parameters(module)
         print(f"The model has {n_pars:,} trainable parameters")
 
