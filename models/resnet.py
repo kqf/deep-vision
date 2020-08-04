@@ -119,14 +119,16 @@ class Bottleneck(torch.nn.Module):
 
 
 class ResNet(torch.nn.Module):
-    def __init__(self, config, output_dim):
+    def __init__(self, input_dim, config, output_dim):
         super().__init__()
 
-        block, n_blocks, channels = config
-        self.in_channels = channels[0]
+        block = config.block
+        n_blocks = config.n_blocks
+        channels = config.channels
 
         assert len(n_blocks) == len(channels) == 4
 
+        self.in_channels = config.channels[0]
         self.conv1 = torch.nn.Conv2d(
             3, self.in_channels,
             kernel_size=7, stride=2, padding=3, bias=False)
@@ -224,8 +226,8 @@ def build_model(batch_norm=True):
     model = VisionClassifierNet(
         module=ResNet,
         module__input_dim=(1, 32, 32),
+        module__config=ResNetConfig(),
         module__output_dim=10,
-        module__freeze_features=False,
         criterion=torch.nn.CrossEntropyLoss,
         optimizer=torch.optim.Adam,
         optimizer__param_groups=[
