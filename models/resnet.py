@@ -119,29 +119,68 @@ class Bottleneck(torch.nn.Module):
 
 
 class ResNet(torch.nn.Module):
-    def __init__(self, input_dim, output_dim, freeze_features=False):
+    def __init__(self, config, output_dim):
         super().__init__()
-        self.preprocess = torch.nn.Identity()
 
-        n_channels, width, height = input_dim
-        self.classifier = torch.nn.Sequential(
-            torch.nn.Linear(n_channels * width * height, 4096),
-            torch.nn.ReLU(inplace=True),
-            torch.nn.Dropout(0.5),
-            torch.nn.Linear(4096, 4096),
-            torch.nn.ReLU(inplace=True),
-            torch.nn.Dropout(0.5),
-            torch.nn.Linear(4096, output_dim),
-        )
+        block, n_blocks, channels = config
+        self.in_channels = channels[0]
+
+        assert len(n_blocks) == len(channels) == 4
+
+        self.conv1 = torch.nn.Conv2d(
+            3, self.in_channels,
+            kernel_size=7, stride=2, padding=3, bias=False)
+        self.bn1 = torch.nn.BatchNorm2d(self.in_channels)
+        self.relu = torch.nn.ReLU(inplace=True)
+        self.maxpool = torch.nn.MaxPool2d(kernel_size=3, stride=2, padding=1)
+
+        self.layer1 = self.get_resnet_layer(block, n_blocks[0], channels[0])
+        self.layer2 = self.get_resnet_layer(
+            block, n_blocks[1], channels[1], stride=2)
+        self.layer3 = self.get_resnet_layer(
+            block, n_blocks[2], channels[2], stride=2)
+        self.layer4 = self.get_resnet_layer(
+            block, n_blocks[3], channels[3], stride=2)
+
+        self.avgpool = torch.nn.AdaptiveAvgPool2d((1, 1))
+        self.fc = torch.nn.Linear(self.in_channels, output_dim)
+
+    def get_resnet_layer(self, block, n_blocks, channels, stride=1):
+
+        layers = []
+
+        if self.in_channels != block.expansion * channels:
+            downsample = True
+        else:
+            downsample = False
+
+        layers.append(block(self.in_channels, channels, stride, downsample))
+
+        for i in range(1, n_blocks):
+            layers.append(block(block.expansion * channels, channels))
+
+        self.in_channels = block.expansion * channels
+
+        return torch.nn.Sequential(*layers)
 
     def forward(self, x):
-        x = self.preprocess(x)
+
+        x = self.conv1(x)
+        x = self.bn1(x)
+        x = self.relu(x)
+        x = self.maxpool(x)
+
+        x = self.layer1(x)
+        x = self.layer2(x)
+        x = self.layer3(x)
+        x = self.layer4(x)
+
+        x = self.avgpool(x)
         h = x.view(x.shape[0], -1)
-        x = self.classifier(h)
+        x = self.fc(h)
         return x
 
 
-# Basic config is ResNet18
 @attr.s
 class ResNetConfig:
     block = attr.ib(default=BasicBlock)
