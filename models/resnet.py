@@ -240,7 +240,7 @@ class VisionClassifierNet(skorch.NeuralNet):
         return accuracy_score(preds, y)
 
 
-def build_model(batch_norm=True):
+def build_model(batch_norm=True, lr=1e-4):
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     model = VisionClassifierNet(
         module=ResNet,
@@ -250,9 +250,14 @@ def build_model(batch_norm=True):
         criterion=torch.nn.CrossEntropyLoss,
         optimizer=torch.optim.Adam,
         optimizer__param_groups=[
-            ('features.*', {'lr': 5e-5}),
+            ('conv1.*', {'lr': lr / 10}),
+            ('bn1.*', {'lr': lr / 10}),
+            ('layer1.*', {'lr': lr / 8}),
+            ('layer2.*', {'lr': lr / 6}),
+            ('layer3.*', {'lr': lr / 4}),
+            ('layer4.*', {'lr': lr / 2}),
         ],
-        optimizer__lr=5e-4,
+        optimizer__lr=lr,
         max_epochs=2,
         batch_size=256,
         iterator_train=DataIterator,
