@@ -216,6 +216,10 @@ def from_pretrained(module, pretrained_module):
 
 
 class ShapeSetter(skorch.callbacks.Callback):
+    def __init__(self, config, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.config = config
+
     def on_train_begin(self, net, X, y):
         x, y = next(iter(X))
         net.set_params(module__input_dim=x.shape)
@@ -226,7 +230,7 @@ class ShapeSetter(skorch.callbacks.Callback):
 
         module = net.module_
 
-        load = operator.methodcaller("resnet18", pretrained=True)
+        load = operator.methodcaller(self.config, pretrained=True)
         from_pretrained(module, load(torchvision.models))
 
         n_pars = self.count_parameters(module)
@@ -253,12 +257,12 @@ class VisionClassifierNet(skorch.NeuralNet):
         return accuracy_score(preds, y)
 
 
-def build_model(config=ResNetConfig(), batch_norm=True, lr=1e-4):
+def build_model(config="resnet50", batch_norm=True, lr=1e-4):
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     model = VisionClassifierNet(
         module=ResNet,
         module__input_dim=(1, 32, 32),
-        module__config=config,
+        module__config=CONFIGURATIONS[config],
         module__output_dim=10,
         criterion=torch.nn.CrossEntropyLoss,
         optimizer=torch.optim.Adam,
@@ -279,7 +283,7 @@ def build_model(config=ResNetConfig(), batch_norm=True, lr=1e-4):
         iterator_valid__shuffle=False,
         device=device,
         callbacks=[
-            ShapeSetter(),
+            ShapeSetter(config),
         ]
     )
     return model

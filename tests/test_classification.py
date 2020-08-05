@@ -1,6 +1,8 @@
 import pytest
 import torchvision
 
+from functools import partial
+
 from models.mlp import build_model as build_mlp
 from models.lenet import build_model as build_lenet
 from models.alexnet import build_model as build_alexnet
@@ -38,7 +40,8 @@ def data():
     build_lenet,
     build_alexnet,
     build_vgg,
-    build_resnet,
+    partial(build_resnet, config="resnet50"),
+    # build_resnet,
 ])
 def test_classifier(build, data):
     model = build().fit(data)
