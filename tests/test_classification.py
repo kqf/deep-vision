@@ -19,7 +19,7 @@ class DownsampledMNIST(torchvision.datasets.MNIST):
         return self.n_samples
 
 
-@pytest.fixture
+@pytest.fixture(scope="module")
 def data():
     transform = torchvision.transforms.Compose([
         torchvision.transforms.ToTensor(),

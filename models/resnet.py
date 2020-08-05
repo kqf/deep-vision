@@ -35,15 +35,14 @@ class BasicBlock(torch.nn.Module):
 
         self.relu = torch.nn.ReLU(inplace=True)
 
+        self.downsampe = torch.nn.Identity()
         if downsample:
-            conv = torch.nn.Conv2d(in_channels, out_channels, kernel_size=1,
-                                   stride=stride, bias=False)
+            conv = torch.nn.Conv2d(
+                in_channels, out_channels,
+                kernel_size=1, stride=stride,
+                bias=False)
             bn = torch.nn.BatchNorm2d(out_channels)
-            downsample = torch.nn.Sequential(conv, bn)
-        else:
-            downsample = None
-
-        self.downsample = downsample
+            self.downsample = torch.nn.Sequential(conv, bn)
 
     def forward(self, x):
         i = x
@@ -55,8 +54,7 @@ class BasicBlock(torch.nn.Module):
         x = self.conv2(x)
         x = self.bn2(x)
 
-        if self.downsample is not None:
-            i = self.downsample(i)
+        i = self.downsample(i)
 
         x += i
         x = self.relu(x)
