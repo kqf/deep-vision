@@ -3,6 +3,7 @@ import skorch
 import torch
 import torchvision
 import random
+import operator
 import numpy as np
 
 from sklearn.metrics import accuracy_score
@@ -122,6 +123,7 @@ class ResNet(torch.nn.Module):
     def __init__(self, input_dim, config, output_dim, preprocess=None):
         super().__init__()
 
+        self.config = config
         block = config.block
         n_blocks = config.n_blocks
         channels = config.channels
@@ -191,6 +193,16 @@ class ResNetConfig:
     channels = attr.ib(default=[64, 128, 256, 512])
 
 
+CONFIGURATIONS = {
+    "resnet18": ResNetConfig(),
+    "resnet50": ResNetConfig(
+        block=Bottleneck,
+        n_blocks=[3, 4, 6, 3],
+        channels=[64, 128, 256, 512]
+    )
+}
+
+
 def from_pretrained(module, pretrained_module):
     custom = module.state_dict()
     pretrained = pretrained_module.state_dict()
@@ -214,8 +226,9 @@ class ShapeSetter(skorch.callbacks.Callback):
 
         module = net.module_
 
-        pretrained = torchvision.models.resnet18(pretrained=True)
-        from_pretrained(module, pretrained)
+        load = operator.methodcaller("resnet18", pretrained=True)
+        from_pretrained(module, load(torchvision.models))
+
         n_pars = self.count_parameters(module)
         print(f"The model has {n_pars:,} trainable parameters")
 
@@ -240,12 +253,12 @@ class VisionClassifierNet(skorch.NeuralNet):
         return accuracy_score(preds, y)
 
 
-def build_model(batch_norm=True, lr=1e-4):
+def build_model(config=ResNetConfig(), batch_norm=True, lr=1e-4):
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     model = VisionClassifierNet(
         module=ResNet,
         module__input_dim=(1, 32, 32),
-        module__config=ResNetConfig(),
+        module__config=config,
         module__output_dim=10,
         criterion=torch.nn.CrossEntropyLoss,
         optimizer=torch.optim.Adam,
