@@ -148,21 +148,13 @@ class ResNet(torch.nn.Module):
         self.fc = torch.nn.Linear(self.in_channels, output_dim)
 
     def _layer(self, block, n_blocks, channels, stride=1):
-
-        layers = []
-
-        if self.in_channels != block.expansion * channels:
-            downsample = True
-        else:
-            downsample = False
-
-        layers.append(block(self.in_channels, channels, stride, downsample))
+        downsample = self.in_channels != block.expansion * channels
+        layers = [block(self.in_channels, channels, stride, downsample)]
 
         for i in range(1, n_blocks):
             layers.append(block(block.expansion * channels, channels))
 
         self.in_channels = block.expansion * channels
-
         return torch.nn.Sequential(*layers)
 
     def forward(self, x):

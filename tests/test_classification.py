@@ -36,12 +36,12 @@ def data():
 
 
 @pytest.mark.parametrize("build", [
-    build_mlp,
-    build_lenet,
-    build_alexnet,
+    # build_mlp,
+    # build_lenet,
+    # build_alexnet,
     build_vgg,
+    build_resnet,
     partial(build_resnet, config="resnet50"),
-    # build_resnet,
 ])
 def test_classifier(build, data):
     model = build().fit(data)
