@@ -21,8 +21,14 @@ torch.backends.cudnn.deterministic = True
 def conv(*args, **kwargs):
     return torch.nn.Conv2d(*args, bias=False, **kwargs)
 
-class BasicBlock(torch.nn.Module):
 
+def skip(cin, cout, stride):
+    cnv = conv(cin, cout, kernel_size=1, stride=stride)
+    bn = torch.nn.BatchNorm2d(cout)
+    return torch.nn.Sequential(cnv, bn)
+
+
+class BasicBlock(torch.nn.Module):
     expansion = 1
 
     def __init__(self, cin, cout, stride=1, downsample=False):
@@ -33,12 +39,8 @@ class BasicBlock(torch.nn.Module):
         self.conv2 = conv(cout, cout, kernel_size=3, stride=1, padding=1)
         self.bn2 = torch.nn.BatchNorm2d(cout)
         self.relu = torch.nn.ReLU(inplace=True)
-
-        self.downsampe = torch.nn.Identity()
-        if downsample:
-            cnv = conv(cin, cout, kernel_size=1, stride=stride, bias=False)
-            bn = torch.nn.BatchNorm2d(cout)
-            self.downsample = torch.nn.Sequential(cnv, bn)
+        self.downsample = torch.nn.Identity() if not downsample else skip(
+            cin, cout, stride)
 
     def forward(self, x):
         i = x
@@ -71,14 +73,8 @@ class Bottleneck(torch.nn.Module):
         self.conv3 = conv(cout, self.expansion * cout, kernel_size=1, stride=1)
         self.bn3 = torch.nn.BatchNorm2d(self.expansion * cout)
         self.relu = torch.nn.ReLU(inplace=True)
-
-        self.downsample = torch.nn.Identity()
-        if downsample:
-            cnv = conv(
-                cin, self.expansion * cout, kernel_size=1,
-                stride=stride)
-            bn = torch.nn.BatchNorm2d(self.expansion * cout)
-            self.downsample = torch.nn.Sequential(cnv, bn)
+        self.downsample = torch.nn.Identity() if not downsample else skip(
+            cin, self.expansion * cout, stride)
 
     def forward(self, x):
         i = x
