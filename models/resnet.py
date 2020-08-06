@@ -109,18 +109,10 @@ def rlayer(cin, block, n_blocks, channels, stride=1):
 
 
 class ResNet(torch.nn.Module):
-    def __init__(self, input_dim, config, output_dim, preprocess=None):
+    def __init__(self, block, n_blocks, channels, output_dim):
         super().__init__()
-
-        self.config = config
-        block = config.block
-        n_blocks = config.n_blocks
-        channels = config.channels
-
         assert len(n_blocks) == len(channels) == 4
         cin = channels[0]
-
-        self.preprocess = preprocess or torch.nn.Identity
         self.conv1 = conv(3, cin, kernel_size=7, stride=2, padding=3)
         self.bn1 = torch.nn.BatchNorm2d(cin)
         self.relu = torch.nn.ReLU(inplace=True)
@@ -135,9 +127,6 @@ class ResNet(torch.nn.Module):
         self.fc = torch.nn.Linear(c, output_dim)
 
     def forward(self, x):
-        x = self.preprocess(x)
-
-        # Original ResNet
         x = self.conv1(x)
         x = self.bn1(x)
         x = self.relu(x)
@@ -151,6 +140,29 @@ class ResNet(torch.nn.Module):
         x = self.avgpool(x)
         h = x.view(x.shape[0], -1)
         x = self.fc(h)
+        return x
+
+
+class ResNetWrapper(torch.nn.Module):
+    def __init__(self, input_dim, config, output_dim):
+        super().__init__()
+        self.config = config
+        self.preprocess = torch.nn.Identity()
+
+        n_channels, width, height = input_dim
+        if n_channels != 3:
+            self.preprocess = conv(n_channels, 3, kernel_size=1)
+
+        self.resnet = ResNet(
+            block=config.block,
+            n_blocks=config.n_blocks,
+            channels=config.channels,
+            output_dim=output_dim,
+        )
+
+    def forward(self, x):
+        x = self.preprocess(x)
+        x = self.resnet(x)
         return x
 
 
@@ -192,12 +204,7 @@ class ShapeSetter(skorch.callbacks.Callback):
     def on_train_begin(self, net, X, y):
         x, y = next(iter(X))
         net.set_params(module__input_dim=x.shape)
-
-        n_channels, width, height = x.shape
-        fix_num_channels = conv(n_channels, 3, kernel_size=1)
-        net.set_params(module__preprocess=fix_num_channels)
-
-        module = net.module_
+        module = net.module_.resnet
 
         load = operator.methodcaller(self.config, pretrained=True)
         from_pretrained(module, load(torchvision.models))
@@ -229,7 +236,7 @@ class VisionClassifierNet(skorch.NeuralNet):
 def build_model(config="resnet50", batch_norm=True, lr=1e-4):
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     model = VisionClassifierNet(
-        module=ResNet,
+        module=ResNetWrapper,
         module__input_dim=(1, 32, 32),
         module__config=CONFIGURATIONS[config],
         module__output_dim=10,
