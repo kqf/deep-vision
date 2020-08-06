@@ -37,9 +37,9 @@ def data():
 
 @pytest.mark.parametrize("build", [
     # build_mlp,
-    # build_lenet,
+    build_lenet,
     # build_alexnet,
-    build_vgg,
+    # build_vgg,
     build_resnet,
     partial(build_resnet, config="resnet50"),
 ])

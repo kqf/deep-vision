@@ -18,31 +18,27 @@ torch.cuda.manual_seed(SEED)
 torch.backends.cudnn.deterministic = True
 
 
+def conv(*args, **kwargs):
+    return torch.nn.Conv2d(*args, bias=False, **kwargs)
+
 class BasicBlock(torch.nn.Module):
 
     expansion = 1
 
-    def __init__(self, in_channels, out_channels, stride=1, downsample=False):
+    def __init__(self, cin, cout, stride=1, downsample=False):
         super().__init__()
 
-        self.conv1 = torch.nn.Conv2d(in_channels, out_channels, kernel_size=3,
-                                     stride=stride, padding=1, bias=False)
-        self.bn1 = torch.nn.BatchNorm2d(out_channels)
-
-        self.conv2 = torch.nn.Conv2d(out_channels, out_channels, kernel_size=3,
-                                     stride=1, padding=1, bias=False)
-        self.bn2 = torch.nn.BatchNorm2d(out_channels)
-
+        self.conv1 = conv(cin, cout, kernel_size=3, stride=stride, padding=1)
+        self.bn1 = torch.nn.BatchNorm2d(cout)
+        self.conv2 = conv(cout, cout, kernel_size=3, stride=1, padding=1)
+        self.bn2 = torch.nn.BatchNorm2d(cout)
         self.relu = torch.nn.ReLU(inplace=True)
 
         self.downsampe = torch.nn.Identity()
         if downsample:
-            conv = torch.nn.Conv2d(
-                in_channels, out_channels,
-                kernel_size=1, stride=stride,
-                bias=False)
-            bn = torch.nn.BatchNorm2d(out_channels)
-            self.downsample = torch.nn.Sequential(conv, bn)
+            cnv = conv(cin, cout, kernel_size=1, stride=stride, bias=False)
+            bn = torch.nn.BatchNorm2d(cout)
+            self.downsample = torch.nn.Sequential(cnv, bn)
 
     def forward(self, x):
         i = x
@@ -65,31 +61,24 @@ class Bottleneck(torch.nn.Module):
 
     expansion = 4
 
-    def __init__(self, in_channels, out_channels, stride=1, downsample=False):
+    def __init__(self, cin, cout, stride=1, downsample=False):
         super().__init__()
 
-        self.conv1 = torch.nn.Conv2d(in_channels, out_channels, kernel_size=1,
-                                     stride=1, bias=False)
-        self.bn1 = torch.nn.BatchNorm2d(out_channels)
-
-        self.conv2 = torch.nn.Conv2d(out_channels, out_channels, kernel_size=3,
-                                     stride=stride, padding=1, bias=False)
-        self.bn2 = torch.nn.BatchNorm2d(out_channels)
-
-        self.conv3 = torch.nn.Conv2d(
-            out_channels, self.expansion * out_channels, kernel_size=1,
-            stride=1, bias=False)
-        self.bn3 = torch.nn.BatchNorm2d(self.expansion * out_channels)
-
+        self.conv1 = conv(cin, cout, kernel_size=1, stride=1)
+        self.bn1 = torch.nn.BatchNorm2d(cout)
+        self.conv2 = conv(cout, cout, kernel_size=3, stride=stride, padding=1)
+        self.bn2 = torch.nn.BatchNorm2d(cout)
+        self.conv3 = conv(cout, self.expansion * cout, kernel_size=1, stride=1)
+        self.bn3 = torch.nn.BatchNorm2d(self.expansion * cout)
         self.relu = torch.nn.ReLU(inplace=True)
 
         self.downsample = torch.nn.Identity()
         if downsample:
-            conv = torch.nn.Conv2d(
-                in_channels, self.expansion * out_channels, kernel_size=1,
-                stride=stride, bias=False)
-            bn = torch.nn.BatchNorm2d(self.expansion * out_channels)
-            self.downsample = torch.nn.Sequential(conv, bn)
+            cnv = conv(
+                cin, self.expansion * cout, kernel_size=1,
+                stride=stride)
+            bn = torch.nn.BatchNorm2d(self.expansion * cout)
+            self.downsample = torch.nn.Sequential(cnv, bn)
 
     def forward(self, x):
         i = x
@@ -125,11 +114,10 @@ class ResNet(torch.nn.Module):
         assert len(n_blocks) == len(channels) == 4
 
         self.preprocess = preprocess or torch.nn.Identity
-        self.in_channels = config.channels[0]
-        self.conv1 = torch.nn.Conv2d(
-            3, self.in_channels,
-            kernel_size=7, stride=2, padding=3, bias=False)
-        self.bn1 = torch.nn.BatchNorm2d(self.in_channels)
+        self.cin = config.channels[0]
+
+        self.conv1 = conv(3, self.cin, kernel_size=7, stride=2, padding=3)
+        self.bn1 = torch.nn.BatchNorm2d(self.cin)
         self.relu = torch.nn.ReLU(inplace=True)
         self.maxpool = torch.nn.MaxPool2d(kernel_size=3, stride=2, padding=1)
 
@@ -139,16 +127,16 @@ class ResNet(torch.nn.Module):
         self.layer4 = self._layer(block, n_blocks[3], channels[3], stride=2)
 
         self.avgpool = torch.nn.AdaptiveAvgPool2d((1, 1))
-        self.fc = torch.nn.Linear(self.in_channels, output_dim)
+        self.fc = torch.nn.Linear(self.cin, output_dim)
 
     def _layer(self, block, n_blocks, channels, stride=1):
-        downsample = self.in_channels != block.expansion * channels
-        layers = [block(self.in_channels, channels, stride, downsample)]
+        downsample = self.cin != block.expansion * channels
+        layers = [block(self.cin, channels, stride, downsample)]
 
         for i in range(1, n_blocks):
             layers.append(block(block.expansion * channels, channels))
 
-        self.in_channels = block.expansion * channels
+        self.cin = block.expansion * channels
         return torch.nn.Sequential(*layers)
 
     def forward(self, x):
@@ -211,8 +199,8 @@ class ShapeSetter(skorch.callbacks.Callback):
         net.set_params(module__input_dim=x.shape)
 
         n_channels, width, height = x.shape
-        conv = torch.nn.Conv2d(n_channels, 3, 1)
-        net.set_params(module__preprocess=conv)
+        fix_num_channels = conv(n_channels, 3, kernel_size=1)
+        net.set_params(module__preprocess=fix_num_channels)
 
         module = net.module_
 
