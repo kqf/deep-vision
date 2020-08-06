@@ -31,7 +31,7 @@ def skip(cin, cout, stride):
 class BasicBlock(torch.nn.Module):
     expansion = 1
 
-    def __init__(self, cin, cout, stride=1, downsample=False):
+    def __init__(self, cin, cout, stride=1, downsample=None):
         super().__init__()
 
         self.conv1 = conv(cin, cout, kernel_size=3, stride=stride, padding=1)
@@ -39,8 +39,7 @@ class BasicBlock(torch.nn.Module):
         self.conv2 = conv(cout, cout, kernel_size=3, stride=1, padding=1)
         self.bn2 = torch.nn.BatchNorm2d(cout)
         self.relu = torch.nn.ReLU(inplace=True)
-        self.downsample = torch.nn.Identity() if not downsample else skip(
-            cin, cout, stride)
+        self.downsample = downsample or torch.nn.Identity()
 
     def forward(self, x):
         i = x
@@ -60,12 +59,10 @@ class BasicBlock(torch.nn.Module):
 
 
 class Bottleneck(torch.nn.Module):
-
     expansion = 4
 
-    def __init__(self, cin, cout, stride=1, downsample=False):
+    def __init__(self, cin, cout, stride=1, downsample=None):
         super().__init__()
-
         self.conv1 = conv(cin, cout, kernel_size=1, stride=1)
         self.bn1 = torch.nn.BatchNorm2d(cout)
         self.conv2 = conv(cout, cout, kernel_size=3, stride=stride, padding=1)
@@ -73,8 +70,7 @@ class Bottleneck(torch.nn.Module):
         self.conv3 = conv(cout, self.expansion * cout, kernel_size=1, stride=1)
         self.bn3 = torch.nn.BatchNorm2d(self.expansion * cout)
         self.relu = torch.nn.ReLU(inplace=True)
-        self.downsample = torch.nn.Identity() if not downsample else skip(
-            cin, self.expansion * cout, stride)
+        self.downsample = downsample or torch.nn.Identity()
 
     def forward(self, x):
         i = x
@@ -127,6 +123,10 @@ class ResNet(torch.nn.Module):
 
     def _layer(self, block, n_blocks, channels, stride=1):
         downsample = self.cin != block.expansion * channels
+
+        if downsample:
+            downsample = skip(self.cin, block.expansion * channels, stride)
+
         layers = [block(self.cin, channels, stride, downsample)]
 
         for i in range(1, n_blocks):
