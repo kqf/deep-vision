@@ -94,6 +94,20 @@ class Bottleneck(torch.nn.Module):
         return x
 
 
+def rlayer(cin, block, n_blocks, channels, stride=1):
+    downsample = cin != block.expansion * channels
+
+    if downsample:
+        downsample = skip(cin, block.expansion * channels, stride)
+
+    layers = [block(cin, channels, stride, downsample)]
+
+    for i in range(1, n_blocks):
+        layers.append(block(block.expansion * channels, channels))
+
+    return torch.nn.Sequential(*layers), block.expansion * channels
+
+
 class ResNet(torch.nn.Module):
     def __init__(self, input_dim, config, output_dim, preprocess=None):
         super().__init__()
@@ -104,36 +118,21 @@ class ResNet(torch.nn.Module):
         channels = config.channels
 
         assert len(n_blocks) == len(channels) == 4
+        cin = channels[0]
 
         self.preprocess = preprocess or torch.nn.Identity
-        self.cin = config.channels[0]
-
-        self.conv1 = conv(3, self.cin, kernel_size=7, stride=2, padding=3)
-        self.bn1 = torch.nn.BatchNorm2d(self.cin)
+        self.conv1 = conv(3, cin, kernel_size=7, stride=2, padding=3)
+        self.bn1 = torch.nn.BatchNorm2d(cin)
         self.relu = torch.nn.ReLU(inplace=True)
         self.maxpool = torch.nn.MaxPool2d(kernel_size=3, stride=2, padding=1)
 
-        self.layer1 = self._layer(block, n_blocks[0], channels[0])
-        self.layer2 = self._layer(block, n_blocks[1], channels[1], stride=2)
-        self.layer3 = self._layer(block, n_blocks[2], channels[2], stride=2)
-        self.layer4 = self._layer(block, n_blocks[3], channels[3], stride=2)
+        self.layer1, c = rlayer(cin, block, n_blocks[0], channels[0])
+        self.layer2, c = rlayer(c, block, n_blocks[1], channels[1], stride=2)
+        self.layer3, c = rlayer(c, block, n_blocks[2], channels[2], stride=2)
+        self.layer4, c = rlayer(c, block, n_blocks[3], channels[3], stride=2)
 
         self.avgpool = torch.nn.AdaptiveAvgPool2d((1, 1))
-        self.fc = torch.nn.Linear(self.cin, output_dim)
-
-    def _layer(self, block, n_blocks, channels, stride=1):
-        downsample = self.cin != block.expansion * channels
-
-        if downsample:
-            downsample = skip(self.cin, block.expansion * channels, stride)
-
-        layers = [block(self.cin, channels, stride, downsample)]
-
-        for i in range(1, n_blocks):
-            layers.append(block(block.expansion * channels, channels))
-
-        self.cin = block.expansion * channels
-        return torch.nn.Sequential(*layers)
+        self.fc = torch.nn.Linear(c, output_dim)
 
     def forward(self, x):
         x = self.preprocess(x)
