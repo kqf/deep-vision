@@ -48,7 +48,27 @@ def build_model():
         batch_size=512,
         criterion=RetrievalLoss,
     )
-    return model
+
+    pretrained_size = 224
+    pretrained_means = [0.485, 0.456, 0.406]
+    pretrained_stds = [0.229, 0.224, 0.225]
+
+    traint = torchvision.transforms.Compose([
+        torchvision.transforms.Resize(pretrained_size),
+        torchvision.transforms.RandomRotation(5),
+        torchvision.transforms.RandomHorizontalFlip(0.5),
+        torchvision.transforms.RandomCrop(pretrained_size, padding=10),
+        torchvision.transforms.ToTensor(),
+        torchvision.transforms.Normalize(pretrained_means, pretrained_stds)
+    ])
+
+    testt = torchvision.transforms.Compose([
+        torchvision.transforms.Resize(pretrained_size),
+        torchvision.transforms.ToTensor(),
+        torchvision.transforms.Normalize(pretrained_means, pretrained_stds)
+    ])
+
+    return model, traint, testt
 
 
 def main():
