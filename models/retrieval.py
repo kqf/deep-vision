@@ -1,13 +1,6 @@
 import torch
-
-
-class Backbone(torch.nn.Module):
-    def __init__(self, resnet):
-        super().__init__()
-        self.resnet = resnet
-
-    def forward(self, x):
-        return self.resnet(x)
+import skorch
+import torchvision
 
 
 class Embedding(torch.nn.Module):
@@ -43,3 +36,24 @@ class RetrievalLoss(torch.nn.Module):
         with torch.no_grad():
             sim = self.sim(b.unsqueeze(0), b.unsqueeze(1))
             return b[(sim - torch.eye(*sim.shape)).argmax(0)]
+
+
+def build_model():
+    resnet18 = torchvision.models.resnet18(pretrained=False)
+    resnet18.fc = torch.nn.Identity()
+
+    model = skorch.NeuralNet(
+        module=Embedding,
+        module__backbone=resnet18,
+        batch_size=512,
+        criterion=RetrievalLoss,
+    )
+    return model
+
+
+def main():
+    pass
+
+
+if __name__ == '__main__':
+    main()
