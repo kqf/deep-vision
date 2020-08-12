@@ -26,8 +26,8 @@ class RetrievalLoss(torch.nn.Module):
         self.sim = sim
 
     def forward(self, queries, targets):
-        wrong = self.negatives(queries, targets)
-        correct = targets
+        wrong = self.negatives(queries, queries)
+        correct = queries
         return torch.nn.functional.relu(
             self.delta - self.sim(queries, correct) + self.sim(queries, wrong)
         ).mean()
@@ -75,7 +75,7 @@ def build_model():
 def main():
     model, traint, testt = build_model()
 
-    train = torchvision.datasets.FashionMNIST(
+    train = torchvision.datasets.CIFAR10(
         root="./data",
         train=True,
         download=True,
@@ -83,7 +83,7 @@ def main():
     )
     model = build_model().fit(train)
 
-    test = torchvision.datasets.FashionMNIST(
+    test = torchvision.datasets.CIFAR10(
         root="./data",
         train=False,
         download=True,
