@@ -46,6 +46,7 @@ def build_model():
         module=Embedding,
         module__backbone=resnet18,
         batch_size=512,
+        device=torch.device("cuda:0" if torch.cuda.is_available() else "cpu"),
         criterion=RetrievalLoss,
     )
 
@@ -72,7 +73,24 @@ def build_model():
 
 
 def main():
-    pass
+    model, traint, testt = build_model()
+
+    train = torchvision.datasets.FashionMNIST(
+        root="./data",
+        train=True,
+        download=True,
+        transform=traint,
+    )
+    model = build_model().fit(train)
+
+    test = torchvision.datasets.FashionMNIST(
+        root="./data",
+        train=False,
+        download=True,
+        transform=testt,
+    )
+    preds = model.predict(test)
+    print(preds)
 
 
 if __name__ == '__main__':
