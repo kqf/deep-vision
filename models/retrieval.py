@@ -1,6 +1,9 @@
 import torch
 import skorch
 import torchvision
+import numpy as np
+
+from sklearn.neighbors import KDTree
 
 
 class Embedding(torch.nn.Module):
@@ -36,6 +39,21 @@ class RetrievalLoss(torch.nn.Module):
         with torch.no_grad():
             sim = self.sim(b.unsqueeze(0), b.unsqueeze(1))
             return b[(sim - torch.eye(*sim.shape)).argmax(0)]
+
+
+def accuracy_at_k(y, X, K, sample=None):
+    kdtree = KDTree(X)
+    y_true = y[:sample]
+
+    indices_of_neighbours = kdtree.query(
+        X[:sample], k=K + 1, return_distance=False)[:, 1:]
+
+    y_hat = y[indices_of_neighbours]
+
+    matching_category_mask = np.expand_dims(np.array(y_true), -1) == y_hat
+    matching_cnt = np.sum(matching_category_mask.sum(-1) > 0)
+    accuracy = matching_cnt / len(y_true)
+    return accuracy
 
 
 def build_model():
