@@ -1,9 +1,18 @@
 import torch
 import skorch
+import random
 import torchvision
 import numpy as np
 
 from sklearn.neighbors import KDTree
+
+SEED = 137
+
+random.seed(SEED)
+np.random.seed(SEED)
+torch.manual_seed(SEED)
+torch.cuda.manual_seed(SEED)
+torch.backends.cudnn.deterministic = True
 
 
 class Embedding(torch.nn.Module):
