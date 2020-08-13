@@ -78,7 +78,7 @@ def build_model():
         criterion=RetrievalLoss,
         callbacks=[
             skorch.callbacks.EpochScoring(score("valid"), False),
-            skorch.callbacks.EpochScoring(score("train"), False, on_train=True)
+            # skorch.callbacks.EpochScoring(score("train"), False, True),
         ]
     )
 

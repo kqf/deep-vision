@@ -1,8 +1,9 @@
 import pytest
 import torchvision
+import numpy as np
 
 from functools import partial
-from models.retrieval import build_model
+from models.retrieval import build_model, accuracy_at_k
 
 
 class DownsampledCIFAR10(torchvision.datasets.CIFAR10):
@@ -26,7 +27,13 @@ def data():
 
 
 def test_retriever(data):
-    model, traint, _ = build_model()
+    model, traint, testt = build_model()
     dataset = data(transform=traint)
     model.fit(dataset)
-    assert model.predict(dataset).shape == (100, 128)
+
+    test = data(transform=testt)
+    embs = model.predict(test)
+    y = np.array([test[i][-1] for i in range(len(test))])
+    acc5 = accuracy_at_k(y, embs, 5)
+    print(acc5)
+    assert acc5 > 0.1
