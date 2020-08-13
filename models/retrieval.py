@@ -45,7 +45,10 @@ def build_model():
     model = skorch.NeuralNet(
         module=Embedding,
         module__backbone=resnet18,
+        optimizer=torch.optim.SGD,
+        lr=0.0005,
         batch_size=512,
+        max_epochs=2,
         device=torch.device("cuda:0" if torch.cuda.is_available() else "cpu"),
         criterion=RetrievalLoss,
     )

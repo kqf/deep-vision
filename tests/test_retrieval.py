@@ -29,5 +29,4 @@ def test_retriever(data):
     model, traint, _ = build_model()
     dataset = data(transform=traint)
     model.fit(dataset)
-
-    print(model)
+    assert model.predict(dataset).shape == (10, 128)
