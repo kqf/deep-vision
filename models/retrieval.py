@@ -56,6 +56,13 @@ def accuracy_at_k(y, X, K, sample=None):
     return accuracy
 
 
+def score(name, K=5):
+    def f(model, X, y):
+        return accuracy_at_k(y, model.predict(X), K=K)
+    f.__name__ = f"{name} acc@{K}"
+    return f
+
+
 def build_model():
     resnet18 = torchvision.models.resnet18(pretrained=False)
     resnet18.fc = torch.nn.Identity()
@@ -69,6 +76,10 @@ def build_model():
         max_epochs=2,
         device=torch.device("cuda:0" if torch.cuda.is_available() else "cpu"),
         criterion=RetrievalLoss,
+        callbacks=[
+            skorch.callbacks.EpochScoring(score("valid"), False),
+            skorch.callbacks.EpochScoring(score("train"), False, on_train=True)
+        ]
     )
 
     pretrained_size = 224

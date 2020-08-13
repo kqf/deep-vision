@@ -6,7 +6,7 @@ from models.retrieval import build_model
 
 
 class DownsampledCIFAR10(torchvision.datasets.CIFAR10):
-    def __init__(self, n_samples=10, *args, **kwargs):
+    def __init__(self, n_samples=100, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.n_samples = n_samples
 
@@ -29,4 +29,4 @@ def test_retriever(data):
     model, traint, _ = build_model()
     dataset = data(transform=traint)
     model.fit(dataset)
-    assert model.predict(dataset).shape == (10, 128)
+    assert model.predict(dataset).shape == (100, 128)
