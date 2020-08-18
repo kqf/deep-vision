@@ -25,14 +25,16 @@ class Embedding(torch.nn.Module):
         return self.embeddings(self.backbone(x))
 
 
-def cosine(a, b):
-    unit_a = a / a.norm(p=2, dim=-1, keepdim=True)
-    unit_b = b / b.norm(p=2, dim=-1, keepdim=True)
-    return (unit_a * unit_b).sum(-1)
+def l2(a):
+    return (a ** 2).sum(-1).view(-1, 1)
+
+
+def dist(a, b):
+    return -2 * a @ b.T + l2(a) + l2(b)
 
 
 class RetrievalLoss(torch.nn.Module):
-    def __init__(self, sim=cosine, delta=1.0):
+    def __init__(self, sim=dist, delta=1.0):
         super().__init__()
         self.delta = delta
         self.sim = sim
@@ -46,8 +48,8 @@ class RetrievalLoss(torch.nn.Module):
 
     def negatives(self, a, b):
         with torch.no_grad():
-            sim = self.sim(b.unsqueeze(0), b.unsqueeze(1))
-            return b[(sim - torch.eye(*sim.shape)).argmax(0)]
+            sim = self.sim(b, b)
+            return b[(sim + torch.eye(*sim.shape)).argmin(0)]
 
 
 def accuracy_at_k(y, X, K, sample=None):
