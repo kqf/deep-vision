@@ -40,16 +40,24 @@ class RetrievalLoss(torch.nn.Module):
         self.sim = sim
 
     def forward(self, queries, targets):
-        wrong = self.negatives(queries, queries)
-        correct = queries
+        with torch.no_grad():
+            distances = self.sim(queries, queries)
+
+            # exploit the broadcasting
+            same_idx = targets.view(-1, 1) == targets.view(1, -1)
+            pos = queries[(distances * same_idx).argmax(-1)]
+
+            neg_idx = (distances * ~same_idx).argmax(-1)
+            neg = queries[neg_idx]
+
         return torch.nn.functional.relu(
-            self.delta - self.sim(queries, correct) + self.sim(queries, wrong)
+            self.delta - self.sim(queries, pos) + self.sim(queries, neg)
         ).mean()
 
     def negatives(self, a, b):
         with torch.no_grad():
             sim = self.sim(b, b)
-            return b[(sim + torch.eye(*sim.shape)).argmin(0)]
+            return b[(sim + torch.eye(*sim.shape)).argmax(0)]
 
 
 def accuracy_at_k(y, X, K, sample=None):
