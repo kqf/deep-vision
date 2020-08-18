@@ -50,14 +50,8 @@ class RetrievalLoss(torch.nn.Module):
             neg_idx = (distances * ~same_idx).argmax(-1)
             neg = queries[neg_idx]
 
-        return torch.nn.functional.relu(
-            self.delta - self.sim(queries, pos) + self.sim(queries, neg)
-        ).mean()
-
-    def negatives(self, a, b):
-        with torch.no_grad():
-            sim = self.sim(b, b)
-            return b[(sim + torch.eye(*sim.shape)).argmax(0)]
+        loss = self.delta - self.sim(queries, pos) + self.sim(queries, neg)
+        return torch.nn.functional.relu(loss).mean()
 
 
 def accuracy_at_k(y, X, K, sample=None):
