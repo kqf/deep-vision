@@ -50,7 +50,7 @@ class RetrievalLoss(torch.nn.Module):
             neg_idx = (distances * ~same_idx).argmax(-1)
             neg = queries[neg_idx]
 
-        loss = self.delta - self.sim(queries, pos) + self.sim(queries, neg)
+        loss = self.delta - (queries - pos) ** 2 + (queries - neg) ** 2
         return torch.nn.functional.relu(loss).mean()
 
 
